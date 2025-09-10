@@ -119,7 +119,7 @@ function addLion(nodeId) {
 function queueMove(lionId, targetNodeId) {
 	state.queuedMoves.set(lionId, targetNodeId);
 	$('#moveBtn').disabled = state.queuedMoves.size === 0;
-	renderQueueArrows();
+	render();
 }
 
 function cancelMoves(fromNodeId, toNodeId) {
@@ -136,7 +136,7 @@ function cancelMoves(fromNodeId, toNodeId) {
 		const lionToCancel = lionsToCancel[0];
 		state.queuedMoves.delete(lionToCancel);
 		$('#moveBtn').disabled = state.queuedMoves.size === 0;
-		renderQueueArrows();
+		render();
 	}
 }
 
@@ -198,8 +198,18 @@ function svgEl(tag, attrs = {}) {
 }
 
 function clearSvg() {
-	const svg = $('#graph');
-	while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const svg = $('#graph');
+    const viewport = svg.querySelector('#viewport');
+
+    // viewport가 존재하면, 그 안의 내용물만 모두 지웁니다.
+    if (viewport) {
+        while (viewport.firstChild) {
+            viewport.removeChild(viewport.firstChild);
+        }
+    }
+
+    // 임시 화살표(static이 아닌 것)만 svg에서 직접 찾아서 지웁니다.
+    Array.from(svg.querySelectorAll('.queue-arrow:not(.static)')).forEach(el => el.remove());
 }
 
 function renderDefs(svg) {
@@ -228,17 +238,17 @@ function renderDefs(svg) {
 	svg.appendChild(defs);
 }
 
-function renderEdges(svg) {
+function renderEdges(viewport) {
 	for (const e of state.graph.edges) {
 		const from = state.graph.nodes.find((n) => n.id === e.from);
 		const to = state.graph.nodes.find((n) => n.id === e.to);
 		if (!from || !to) continue;
 		const line = svgEl('line', { class: 'edge', x1: from.x, y1: from.y, x2: to.x, y2: to.y });
-		svg.appendChild(line);
+		viewport.appendChild(line);
 	}
 }
 
-function renderNodes(svg) {
+function renderNodes(viewport) {
 	const lionNodes = new Map(); // nodeId -> lions count'
 	const nodeRadius = CONFIG.nodeRadius;
 	for (const l of state.lions) lionNodes.set(l.nodeId, (lionNodes.get(l.nodeId) || 0) + 1);
@@ -275,11 +285,12 @@ function renderNodes(svg) {
 
 		g.addEventListener('click', (e) => onNodeClick(node.id, e));
 		g.addEventListener('mousedown', (e) => onNodeMouseDown(node.id, e));
-		svg.appendChild(g);
+		viewport.appendChild(g);
 	}
 }
 
 let dragInfo = null; // { fromNodeId, startX, startY }
+let canvasWasDragged = false;
 
 function getSvgPoint(evt) {
 	const svg = document.getElementById('graph');
@@ -294,6 +305,9 @@ function getSvgPoint(evt) {
 }
 
 function onNodeClick(nodeId, e) {
+	if (canvasWasDragged) {
+        return; // 화면이 드래그되었으므로, 클릭으로 처리하지 않음
+    }
 	if (!state.started) {
 		addLion(nodeId);
 		$('#startBtn').disabled = false;
@@ -303,6 +317,7 @@ function onNodeClick(nodeId, e) {
 }
 
 function onNodeMouseDown(nodeId, e) {
+	canvasWasDragged = false;
 	if (!state.started) return; // queueing allowed only after start?
 	const lionOnNode = state.lions.some((l) => l.nodeId === nodeId);
 	if (!lionOnNode) return;
@@ -386,13 +401,9 @@ function onDragEnd(e) {
 	dragInfo = null;
 }
 
-function renderQueueArrows() {
-	const svg = $('#graph');
+function renderQueueArrows(viewport) {
 	const nodeRadius = CONFIG.nodeRadius;
-	// remove old arrows and count texts
-	Array.from(svg.querySelectorAll('.queue-arrow.static')).forEach((el) => el.remove());
-	Array.from(svg.querySelectorAll('.arrow-count')).forEach((el) => el.remove());
-	
+
 	// Group moves by from->to pairs
 	const moveGroups = new Map(); // "fromId->toId" -> count
 	for (const lion of state.lions) {
@@ -424,7 +435,8 @@ function renderQueueArrows() {
             newY1 = fromNode.y + (dy / length) * nodeRadius;
             
             // 끝점 좌표: toNode 중심에서 fromNode 방향으로 반지름만큼 이동 (반대로 빼줌)
-			const totalShortenDist = nodeRadius + CONFIG.arrowHeadLength * CONFIG.arrowHeadWidth;
+			const arrowheadPixelLength = CONFIG.arrowHeadLength * CONFIG.arrowStrokeWidth;
+            const totalShortenDist = nodeRadius + arrowheadPixelLength;
             newX2 = toNode.x - (dx / length) * totalShortenDist;
             newY2 = toNode.y - (dy / length) * totalShortenDist;
         }
@@ -447,7 +459,7 @@ function renderQueueArrows() {
 			cancelMoves(fromId, toId);
 		});
 		
-		svg.appendChild(line);
+		viewport.appendChild(line);
 		
 		// Add count text only if count > 1
 		if (count > 1) {
@@ -486,18 +498,29 @@ function renderQueueArrows() {
 				e.stopPropagation();
 				cancelMoves(fromId, toId);
 			});
-			svg.appendChild(text);
+			viewport.appendChild(text);
 		}
 	}
 }
 
 function render() {
-	clearSvg();
-	const svg = $('#graph');
-	renderDefs(svg);
-	renderEdges(svg);
-	renderNodes(svg);
-	renderQueueArrows();
+    const svg = $('#graph');
+    
+    // viewport를 찾고, 만약 없으면 새로 생성합니다.
+    let viewport = svg.querySelector('#viewport');
+    if (!viewport) {
+        viewport = svgEl('g', { id: 'viewport' });
+        svg.appendChild(viewport);
+    }
+
+    // 이제 내용물을 지우는 clearSvg를 호출합니다.
+    clearSvg();
+
+    // 나머지 렌더링 함수들은 그대로 viewport를 사용합니다.
+    renderDefs(svg);
+    renderEdges(viewport);
+    renderNodes(viewport);
+    renderQueueArrows(viewport);
 }
 
 function setupUI() {
@@ -541,6 +564,28 @@ function bootstrap() {
 	};
 	$('#graphInput').value = JSON.stringify(exampleGraph, null, 2);
 	render();
+	const panZoomInstance = svgPanZoom('#graph', {
+        zoomEnabled: true,
+        panEnabled: true,
+        controlIconsEnabled: true,
+        fit: true,
+        center: true,
+        minZoom: 0.5,
+        maxZoom: 10,
+		dblClickZoomEnabled: false,
+        // 이 부분이 중요: 우리가 만든 <g> 그룹을 움직이도록 설정
+        viewportSelector: '#viewport',
+		onPan: function() {
+            canvasWasDragged = true;
+        }
+    });
+	
+    
+    // 창 크기가 변경될 때 캔버스 크기도 맞춰주기
+    window.addEventListener('resize', () => {
+        panZoomInstance.resize();
+        panZoomInstance.center();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', bootstrap);
