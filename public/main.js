@@ -291,49 +291,110 @@ function renderNodes(viewport) {
 
 let dragInfo = null; // { fromNodeId, startX, startY }
 let canvasWasDragged = false;
+let panZoomInstance = null;
 
-function getSvgPoint(evt) {
-	const svg = document.getElementById('graph');
-	const pt = svg.createSVGPoint();
-	pt.x = evt.clientX;
-	pt.y = evt.clientY;
-	const ctm = svg.getScreenCTM();
-	if (!ctm) return { x: evt.offsetX, y: evt.offsetY };
-	const inv = ctm.inverse();
-	const sp = pt.matrixTransform(inv);
-	return { x: sp.x, y: sp.y };
+/**
+ * 입력값의 종류에 따라 좌표를 변환하는 범용 함수.
+ * - 입력값이 이벤트(Event)이면: 화면 좌표를 SVG 내부 좌표로 변환.
+ * - 입력값이 좌표 객체({x,y})이면: 노드의 절대 좌표를 현재 Pan/Zoom 상태의 상대 좌표로 변환.
+ * @param {Event | {x: number, y: number}} input - 마우스 이벤트 또는 좌표 객체
+ * @returns {{x: number, y: number}} 변환된 SVG 좌표
+ */
+function getSvgPoint(input) {
+    const svg = $('#graph');
+    const pt = svg.createSVGPoint();
+
+    // 입력값이 마우스/터치 이벤트인 경우
+    if (input instanceof Event || (window.TouchEvent && input instanceof TouchEvent)) {
+        const point = input.changedTouches ? input.changedTouches[0] : input;
+        pt.x = point.clientX;
+        pt.y = point.clientY;
+        
+        // 화면 좌표 -> SVG 좌표 변환
+        const ctm = svg.getScreenCTM();
+        if (!ctm) return { x: 0, y: 0 };
+        return pt.matrixTransform(ctm.inverse());
+    } 
+    // 입력값이 좌표 객체({x, y})인 경우
+    else if (typeof input === 'object' && input.x !== undefined && input.y !== undefined) {
+        const viewport = $('#viewport');
+        if (!viewport) return input;
+
+        pt.x = input.x;
+        pt.y = input.y;
+
+        // 노드 절대 좌표 -> 현재 보이는 상대 좌표 변환
+        const matrix = viewport.getCTM();
+        return pt.matrixTransform(matrix);
+    }
+
+    // 예외 처리
+    return { x: 0, y: 0 };
 }
 
 function onNodeClick(nodeId, e) {
-	if (canvasWasDragged) {
-        return; // 화면이 드래그되었으므로, 클릭으로 처리하지 않음
+	let wasDrag = canvasWasDragged; // 라이브러리가 판단한 드래그 여부
+
+    // 백업 장치: 마우스 이동 거리를 직접 계산
+    if (mouseDownPos) {
+        const dx = e.clientX - mouseDownPos.x;
+        const dy = e.clientY - mouseDownPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // 만약 마우스가 5px 이상 움직였다면 드래그로 간주
+        if (distance > 5) {
+            wasDrag = true;
+        }
     }
-	if (!state.started) {
-		addLion(nodeId);
-		$('#startBtn').disabled = false;
-		$('#resetBtn').disabled = false;
-		render();
-	}
+
+    // 라이브러리가 드래그로 판단했거나, 실제 마우스 이동 거리가 길었다면 함수 종료
+    if (wasDrag) {
+        return;
+    }
+
+    // 드래그가 아닐 경우에만 사자 추가 로직 실행
+    if (!state.started) {
+        addLion(nodeId);
+        $('#startBtn').disabled = false;
+        $('#resetBtn').disabled = false;
+        render();
+    }
 }
 
 function onNodeMouseDown(nodeId, e) {
-	canvasWasDragged = false;
-	if (!state.started) return; // queueing allowed only after start?
-	const lionOnNode = state.lions.some((l) => l.nodeId === nodeId);
-	if (!lionOnNode) return;
-	const node = state.graph.nodes.find(n => n.id === nodeId);
-	if (!node) return;
-	// Start arrow from node center instead of touch position
-	dragInfo = { fromNodeId: nodeId, startX: node.x, startY: node.y };
-	document.addEventListener('mousemove', onDragMove);
-	document.addEventListener('mouseup', onDragEnd, { once: true });
+    mouseDownPos = { x: e.clientX, y: e.clientY };
+    canvasWasDragged = false;
+
+    if (state.started) {
+        const lionOnNode = state.lions.some((l) => l.nodeId === nodeId);
+        if (!lionOnNode) return;
+
+        const node = state.graph.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        // ▼▼▼ 이 부분이 간단해집니다 ▼▼▼
+        // getSvgPoint에 노드의 원본 좌표를 넘겨주어 현재 보이는 위치를 계산합니다.
+        const startCoords = getSvgPoint({ x: node.x, y: node.y });
+
+        dragInfo = { fromNodeId: nodeId, startX: startCoords.x, startY: startCoords.y };
+        
+        if (panZoomInstance) panZoomInstance.disablePan();
+        
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd, { once: true });
+    }
 }
 
 function getNearestNodeId(x, y) {
 	let best = { id: null, d2: Infinity };
 	for (const n of state.graph.nodes) {
-		const dx = n.x - x;
-		const dy = n.y - y;
+		// 1. 노드의 원본(절대) 좌표를 현재 보이는 화면(상대) 좌표로 변환합니다.
+        const nodeCurrentPos = getSvgPoint({ x: n.x, y: n.y });
+
+        // 2. 이제 마우스 위치와 변환된 노드 위치, 즉 동일한 좌표계에서 거리를 계산합니다.
+        const dx = nodeCurrentPos.x - x;
+        const dy = nodeCurrentPos.y - y;
+        
 		const d2 = dx * dx + dy * dy;
 		if (d2 < best.d2) best = { id: n.id, d2 };
 	}
@@ -370,7 +431,7 @@ function onDragMove(e) {
 
     if (!arrow) {
         // 4. 계산된 끝점으로 선을 생성합니다.
-        arrow = svgEl('line', { id: arrowId, class: 'queue-arrow', x1: dragInfo.startX, y1: dragInfo.startY, x2: endX, y2: endY });
+        arrow = svgEl('line', { id: arrowId, class: 'queue-arrow', x1: dragInfo.startX, y1: dragInfo.startY, x2: endX, y2: endY, 'marker-end': 'url(#queueArrowhead)'});
         svg.appendChild(arrow);
     } else {
         // 5. 드래그 중에도 계속해서 계산된 끝점으로 업데이트합니다.
@@ -385,6 +446,12 @@ function onDragEnd(e) {
 	const arrow = document.getElementById('queue-arrow-temp');
 	if (arrow) svg.removeChild(arrow);
 	if (!dragInfo) return;
+
+	// 화살표 그리기가 끝났으므로, 캔버스 이동(Pan) 기능을 다시 활성화합니다.
+    if (panZoomInstance) {
+        panZoomInstance.enablePan();
+    }
+
 	const from = dragInfo.fromNodeId;
 	const { x, y } = getSvgPoint(e);
 	const to = getNearestNodeId(x, y);
@@ -564,22 +631,33 @@ function bootstrap() {
 	};
 	$('#graphInput').value = JSON.stringify(exampleGraph, null, 2);
 	render();
-	const panZoomInstance = svgPanZoom('#graph', {
+	let eventTarget = null; // 터치/클릭된 대상을 저장할 변수
+
+    // mousedown과 touchstart 이벤트를 사용해 실제 이벤트 대상을 미리 저장
+    $('#graph').addEventListener('mousedown', e => { eventTarget = e.target; });
+    $('#graph').addEventListener('touchstart', e => { eventTarget = e.target; });
+
+    panZoomInstance = svgPanZoom('#graph', {
         zoomEnabled: true,
         panEnabled: true,
-        controlIconsEnabled: true,
+        controlIconsEnabled: false,
+		doubleClickZoomEnabled: false,
         fit: true,
         center: true,
         minZoom: 0.5,
         maxZoom: 10,
-		dblClickZoomEnabled: false,
-        // 이 부분이 중요: 우리가 만든 <g> 그룹을 움직이도록 설정
         viewportSelector: '#viewport',
-		onPan: function() {
-            canvasWasDragged = true;
+        
+        // ▼ 핵심: Pan/Zoom 동작 전 실행되는 콜백 함수 추가 ▼
+        beforePan: function() {
+            const isNode = eventTarget && eventTarget.closest('.node');
+            
+            // 게임이 시작된 후에 노드를 드래그할 때만 Pan을 막습니다.
+            if (isNode && state.started) {
+                return false;
+            }
         }
     });
-	
     
     // 창 크기가 변경될 때 캔버스 크기도 맞춰주기
     window.addEventListener('resize', () => {

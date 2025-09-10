@@ -52,7 +52,7 @@ main { display: grid; grid-template-columns: 1fr 320px; gap: 12px; padding: 12px
 .node .emoji { font-size: 20px; pointer-events: none; user-select: none; dominant-baseline: middle; alignment-baseline: middle; }
 .queue-arrow { 
     stroke: #ef4444; 
-    stroke-width: 3; /* 이제 3으로 설정해도 괜찮습니다. */
+    stroke-width: 3;
     fill: none; 
     marker-end: url(#queueArrowhead); 
     opacity: 0.9; 
