@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lions & Contamination Simulator</title>
+    <link rel="stylesheet" href="./public/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🦁 Lions & Contamination</h1>
+      <div class="controls">
+        <button id="loadBtn">Load Graph</button>
+        <button id="startBtn" disabled>Start</button>
+        <button id="moveBtn" disabled>Move Lions</button>
+        <button id="resetBtn" disabled>Reset</button>
+      </div>
+      <div class="legend">
+        <span>🦁 Lion</span>
+        <span>🦠 Contamination</span>
+      </div>
+    </header>
+
+    <main>
+      <div id="canvasWrapper">
+        <svg id="graph" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <aside id="sidebar">
+        <h3>Graph Input</h3>
+        <textarea id="graphInput" placeholder="Enter graph JSON here..." rows="15"></textarea>
+        <h3>Instructions</h3>
+        <ol>
+          <li>위 텍스트 영역에 그래프 JSON을 입력하세요.</li>
+          <li>Load Graph 버튼을 눌러 그래프를 로드합니다.</li>
+          <li>노드를 클릭해 🦁 배치 (여러 마리 가능, 겹침 가능).</li>
+          <li>🦁가 있는 노드를 누른 채 드래그해 방향 화살표를 그립니다.</li>
+          <li>Move Lions 버튼을 누르면 모든 🦁가 동시에 이동합니다.</li>
+          <li>그 후 🦠이 인접 노드로 1칸 확산합니다. 🦁가 있는 노드에는 퍼지지 않습니다.</li>
+        </ol>
+      </aside>
+    </main>
+
+    <script src="./public/main.js"></script>
+  </body>
+</html>
