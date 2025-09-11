@@ -31,12 +31,12 @@ function onInteractionStart(e) {
         canDrag,
         startX: point.clientX,
         startY: point.clientY,
+        lastX: point.clientX, // Initialize last coordinates
+        lastY: point.clientY,
         startTime: Date.now(),
         isDrag: false,
     };
 
-    // If the user starts a drag on ANY node while the simulation is running,
-    // prevent the canvas from panning.
     if (isNodeInteraction && state.started) {
         if (panZoomInstance) panZoomInstance.disablePan();
     }
@@ -55,13 +55,15 @@ function onInteractionMove(e) {
     if (!interactionInfo) return;
     const point = e.touches ? e.touches[0] : e;
 
-    // If a valid drag was initiated, start drawing the arrow immediately.
+    // Store the last known position. This is crucial for touchend.
+    interactionInfo.lastX = point.clientX;
+    interactionInfo.lastY = point.clientY;
+
     if (interactionInfo.canDrag) {
         interactionInfo.isDrag = true;
         e.preventDefault();
         drawTemporaryArrow(point);
     } else {
-        // If not a valid drag source, use a threshold to distinguish tap vs. pan.
         const dx = point.clientX - interactionInfo.startX;
         const dy = point.clientY - interactionInfo.startY;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -79,7 +81,6 @@ function onInteractionEnd(e) {
 
     if (!interactionInfo) return;
 
-    // Always re-enable panning when the interaction ends.
     if (panZoomInstance) panZoomInstance.enablePan();
 
     const wasDrag = interactionInfo.isDrag;
@@ -90,7 +91,12 @@ function onInteractionEnd(e) {
     if (wasNodeInteraction) {
         if (wasDrag) {
             if (interactionInfo.canDrag) {
-                const endPoint = e.changedTouches ? e.changedTouches[0] : e;
+                // For touchend, the coordinates in the event can be unreliable (0,0).
+                // Use the last valid coordinates recorded during onInteractionMove.
+                const endPoint = {
+                    clientX: interactionInfo.lastX,
+                    clientY: interactionInfo.lastY
+                };
                 handleMoveQueue(interactionInfo.nodeId, endPoint);
             }
         } else {
