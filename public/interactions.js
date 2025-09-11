@@ -1,66 +1,142 @@
 import { state, addLion, queueMove, cancelMoves } from './state.js';
 import { render, svgEl } from './renderer.js';
 import { getSvgPoint, getNearestNodeId, $ } from './utils.js';
-import { panZoomInstance, getMouseDownPos, setMouseDownPos } from './ui.js';
+import { panZoomInstance } from './ui.js';
 import { CONFIG } from './config.js';
 
-let dragInfo = null; // { fromNodeId, startX, startY }
+// This object holds all information about an ongoing interaction (click or drag)
+let interactionInfo = null;
 
-function onNodeClick(nodeId, e) {
-    let wasDrag;
-    const mouseDownPos = getMouseDownPos();
-
-    if (mouseDownPos) {
-        const dx = e.clientX - mouseDownPos.x;
-        const dy = e.clientY - mouseDownPos.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > 5) {
-            wasDrag = true;
-        }
-    }
-
-    if (wasDrag) {
+/**
+ * Handles the start of an interaction (mousedown or touchstart).
+ */
+function onInteractionStart(e) {
+    // If it's a multi-touch gesture, let the pan/zoom library handle it.
+    if (e.touches && e.touches.length > 1) {
+        interactionInfo = null; // Cancel any ongoing interaction
         return;
     }
 
-    if (!state.started) {
-        addLion(nodeId);
-        $('#startBtn').disabled = false;
-        $('#resetBtn').disabled = false;
-        render();
+    const nodeEl = e.target.closest('.node');
+    const isNodeInteraction = !!nodeEl;
+
+    // Get correct event coordinates based on event type (mouse vs. touch)
+    const point = e.touches ? e.touches[0] : e;
+
+    interactionInfo = {
+        isNodeInteraction,
+        nodeId: isNodeInteraction ? nodeEl.dataset.nodeId : null,
+        startX: point.clientX,
+        startY: point.clientY,
+        startTime: Date.now(),
+        isDrag: false,
+    };
+
+    // If interacting with a node, prevent default browser actions like scrolling.
+    // This is crucial for a smooth drag-to-move experience on mobile.
+    if (isNodeInteraction) {
+        e.preventDefault();
     }
+
+    // Add move and end listeners
+    document.addEventListener('mousemove', onInteractionMove);
+    document.addEventListener('touchmove', onInteractionMove, { passive: false });
+    document.addEventListener('mouseup', onInteractionEnd);
+    document.addEventListener('touchend', onInteractionEnd);
 }
 
-function onNodeMouseDown(nodeId, e) {
-    setMouseDownPos({ x: e.clientX, y: e.clientY });
+/**
+ * Handles movement during an interaction (mousemove or touchmove).
+ */
+function onInteractionMove(e) {
+    if (!interactionInfo) return;
 
-    if (state.started) {
-        const lionOnNode = state.lions.some((l) => l.nodeId === nodeId);
-        if (!lionOnNode) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - interactionInfo.startX;
+    const dy = point.clientY - interactionInfo.startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-        const node = state.graph.nodes.find(n => n.id === nodeId);
-        if (!node) return;
+    // If moved more than a threshold, it's a drag.
+    if (distance > 5) {
+        interactionInfo.isDrag = true;
+    }
 
-        const startCoords = getSvgPoint({ x: node.x, y: node.y });
-        dragInfo = { fromNodeId: nodeId, startX: startCoords.x, startY: startCoords.y };
-        
+    // If it's a drag that started on a node during the simulation, draw the arrow.
+    if (interactionInfo.isDrag && interactionInfo.isNodeInteraction && state.started) {
+        // Prevent pan while dragging to create a move arrow
         if (panZoomInstance) panZoomInstance.disablePan();
-        
-        document.addEventListener('mousemove', onDragMove);
-        document.addEventListener('mouseup', onDragEnd, { once: true });
+        e.preventDefault();
+        drawTemporaryArrow(point);
     }
 }
 
-function onDragMove(e) {
-	if (!dragInfo) return;
-	const svg = $('#graph');
+/**
+ * Handles the end of an interaction (mouseup or touchend).
+ */
+function onInteractionEnd(e) {
+    // Clean up listeners immediately
+    document.removeEventListener('mousemove', onInteractionMove);
+    document.removeEventListener('touchmove', onInteractionMove);
+    document.removeEventListener('mouseup', onInteractionEnd);
+    document.removeEventListener('touchend', onInteractionEnd);
+
+    if (!interactionInfo) return;
+
+    const wasDrag = interactionInfo.isDrag;
+    const wasNodeInteraction = interactionInfo.isNodeInteraction;
+
+    // Cleanup UI (arrow, re-enable pan)
+    removeTemporaryArrow();
+    if (panZoomInstance) panZoomInstance.enablePan();
+
+    if (wasNodeInteraction) {
+        if (wasDrag) {
+            // Drag ended on a node: try to queue a move
+            if (state.started) {
+                const endPoint = e.changedTouches ? e.changedTouches[0] : e;
+                handleMoveQueue(interactionInfo.nodeId, endPoint);
+            }
+        } else {
+            // It was a tap on a node: try to place a lion
+            if (!state.started) {
+                addLion(interactionInfo.nodeId);
+                $('#startBtn').disabled = false;
+                $('#resetBtn').disabled = false;
+                render();
+            }
+        }
+    } else {
+        // It was a click/drag on the canvas, check for cancelling a move
+        const arrowEl = e.target.closest('.queue-arrow.static, .arrow-count');
+        if (arrowEl) {
+            e.stopPropagation();
+            cancelMoves(arrowEl.dataset.from, arrowEl.dataset.to);
+        }
+    }
+
+    // Reset interaction state
+    interactionInfo = null;
+}
+
+/**
+ * Draws the temporary arrow while dragging to queue a move.
+ */
+function drawTemporaryArrow(endPoint) {
+    if (!interactionInfo) return;
+
+    const svg = $('#graph');
 	const arrowId = 'queue-arrow-temp';
-	let arrow = document.getElementById(arrowId);
-	const { x, y } = getSvgPoint(e);
+    let arrow = document.getElementById(arrowId);
+    
+    const node = state.graph.nodes.find(n => n.id === interactionInfo.nodeId);
+    if (!node) return;
+
+    const startCoords = getSvgPoint({ x: node.x, y: node.y });
+	const { x, y } = getSvgPoint(endPoint);
     const arrowheadPixelLength = CONFIG.arrowHeadLength * CONFIG.arrowStrokeWidth;
 
-    const dx = x - dragInfo.startX;
-    const dy = y - dragInfo.startY;
+    const dx = x - startCoords.x;
+    const dy = y - startCoords.y;
     const length = Math.sqrt(dx * dx + dy * dy);
 
     let endX = x;
@@ -69,13 +145,13 @@ function onDragMove(e) {
     if (length > arrowheadPixelLength) {
         endX = x - (dx / length) * arrowheadPixelLength;
         endY = y - (dy / length) * arrowheadPixelLength;
-    } else {
-		endX = dragInfo.startX + (dx / length ) * 0.1;
-		endY = dragInfo.startY + (dy / length ) * 0.1;
+    } else if (length > 0) {
+		endX = startCoords.x + (dx / length ) * 0.1;
+		endY = startCoords.y + (dy / length ) * 0.1;
 	}
 
     if (!arrow) {
-        arrow = svgEl('line', { id: arrowId, class: 'queue-arrow', x1: dragInfo.startX, y1: dragInfo.startY, x2: endX, y2: endY, 'marker-end': 'url(#queueArrowhead)'});
+        arrow = svgEl('line', { id: arrowId, class: 'queue-arrow', x1: startCoords.x, y1: startCoords.y, x2: endX, y2: endY, 'marker-end': 'url(#queueArrowhead)'});
         svg.appendChild(arrow);
     } else {
         arrow.setAttribute('x2', endX);
@@ -83,59 +159,34 @@ function onDragMove(e) {
     }
 }
 
-function onDragEnd(e) {
-	document.removeEventListener('mousemove', onDragMove);
-	const svg = $('#graph');
-	const arrow = document.getElementById('queue-arrow-temp');
-	if (arrow) svg.removeChild(arrow);
-	if (!dragInfo) return;
-
-    if (panZoomInstance) {
-        panZoomInstance.enablePan();
-    }
-
-	const from = dragInfo.fromNodeId;
-	const { x, y } = getSvgPoint(e);
-	const to = getNearestNodeId(x, y);
-	const neighbors = state.graph.adjacency.get(from) || new Set();
-	if (neighbors.has(to)) {
-		const lionsOnNode = state.lions.filter(l => l.nodeId === from);
-		const lionWithoutMove = lionsOnNode.find(l => !state.queuedMoves.has(l.id));
-		if (lionWithoutMove) {
-			queueMove(lionWithoutMove.id, to);
-		}
-	}
-	dragInfo = null;
+function removeTemporaryArrow() {
+    const arrow = document.getElementById('queue-arrow-temp');
+	if (arrow) arrow.remove();
 }
 
+/**
+ * Handles the logic for queuing a move after a drag ends.
+ */
+function handleMoveQueue(fromNodeId, endPoint) {
+    const { x, y } = getSvgPoint(endPoint);
+	const toNodeId = getNearestNodeId(x, y);
+	const neighbors = state.graph.adjacency.get(fromNodeId) || new Set();
+
+	if (neighbors.has(toNodeId)) {
+		const lionsOnNode = state.lions.filter(l => l.nodeId === fromNodeId);
+		const lionWithoutMove = lionsOnNode.find(l => !state.queuedMoves.has(l.id));
+		if (lionWithoutMove) {
+			queueMove(lionWithoutMove.id, toNodeId);
+		}
+	}
+}
+
+/**
+ * Initializes all interaction event listeners.
+ */
 export function initInteractions() {
     const svg = $('#graph');
-
-    svg.addEventListener('click', (e) => {
-        const target = e.target;
-        const nodeEl = target.closest('.node');
-        const arrowEl = target.closest('.queue-arrow.static');
-        const countEl = target.closest('.arrow-count');
-
-        if (nodeEl) {
-            onNodeClick(nodeEl.dataset.nodeId, e);
-            return;
-        }
-
-        if (arrowEl || countEl) {
-            e.stopPropagation();
-            const el = arrowEl || countEl;
-            const fromId = el.dataset.from;
-            const toId = el.dataset.to;
-            cancelMoves(fromId, toId);
-            return;
-        }
-    });
-
-    svg.addEventListener('mousedown', (e) => {
-        const nodeEl = e.target.closest('.node');
-        if (nodeEl) {
-            onNodeMouseDown(nodeEl.dataset.nodeId, e);
-        }
-    });
+    // Use passive: false for touchstart to allow preventDefault()
+    svg.addEventListener('mousedown', onInteractionStart);
+    svg.addEventListener('touchstart', onInteractionStart, { passive: false });
 }
