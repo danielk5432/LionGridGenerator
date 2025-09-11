@@ -66,7 +66,7 @@ function onInteractionMove(e) {
         // Prevent pan while dragging to create a move arrow
         if (panZoomInstance) panZoomInstance.disablePan();
         e.preventDefault();
-        drawTemporaryArrow(point);
+        drawTemporaryArrow(e);
     }
 }
 

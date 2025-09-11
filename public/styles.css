@@ -65,3 +65,12 @@ main { display: grid; grid-template-columns: 1fr 320px; gap: 12px; padding: 12px
 
 .panel { font-size: 14px; color: #444; }
 .panel .row { display: flex; justify-content: space-between; margin: 6px 0; }
+
+@media (max-width: 900px) {
+  main {
+    /* 2열 그리드 -> 1열로 변경 (세로 쌓기) */
+    grid-template-columns: 1fr;
+    /* 세로 스크롤이 필요할 수 있으므로 main 영역은 스크롤 허용 */
+    overflow-y: auto;
+  }
+}
