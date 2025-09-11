@@ -20,9 +20,9 @@ function onInteractionStart(e) {
     }
 
     if (e.touches && e.touches.length > 1) {
-        if (debugOutput) debugOutput.innerText += '\nMulti-touch, ignoring.';
-        interactionInfo = null;
-        return;
+        interactionInfo = null; // Prevent single-touch logic
+        if (panZoomInstance) panZoomInstance.enablePan();
+        return; // Let panzoom handle it
     }
 
     const nodeEl = e.target.closest('.node');
