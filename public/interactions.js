@@ -47,9 +47,7 @@ function onInteractionStart(e) {
         if (panZoomInstance) panZoomInstance.disablePan();
     }
 
-    if (isNodeInteraction) {
-        e.preventDefault();
-    }
+    
 
     document.addEventListener('mousemove', onInteractionMove);
     document.addEventListener('touchmove', onInteractionMove, { passive: false });
