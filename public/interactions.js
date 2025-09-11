@@ -14,7 +14,13 @@ function isDragSourceValid(nodeId) {
 }
 
 function onInteractionStart(e) {
+    const debugOutput = document.getElementById('debug-output');
+    if (debugOutput) {
+        debugOutput.innerText = `Event: ${e.type}`;
+    }
+
     if (e.touches && e.touches.length > 1) {
+        if (debugOutput) debugOutput.innerText += '\nMulti-touch, ignoring.';
         interactionInfo = null;
         return;
     }
@@ -31,7 +37,7 @@ function onInteractionStart(e) {
         canDrag,
         startX: point.clientX,
         startY: point.clientY,
-        lastX: point.clientX, // Initialize last coordinates
+        lastX: point.clientX,
         lastY: point.clientY,
         startTime: Date.now(),
         isDrag: false,
@@ -52,19 +58,16 @@ function onInteractionStart(e) {
 }
 
 function onInteractionMove(e) {
-    if (!interactionInfo) return;
-    const point = e.touches ? e.touches[0] : e;
-
-    // --- START OF VISUAL DEBUG CODE ---
     const debugOutput = document.getElementById('debug-output');
+    const point = e.touches ? e.touches[0] : e;
     if (debugOutput) {
         debugOutput.innerText = `Event: ${e.type}\n` +
                                 `X: ${point.clientX}\n` +
                                 `Y: ${point.clientY}`;
     }
-    // --- END OF VISUAL DEBUG CODE ---
 
-    // Store the last known position. This is crucial for touchend.
+    if (!interactionInfo) return;
+
     interactionInfo.lastX = point.clientX;
     interactionInfo.lastY = point.clientY;
 
@@ -100,8 +103,6 @@ function onInteractionEnd(e) {
     if (wasNodeInteraction) {
         if (wasDrag) {
             if (interactionInfo.canDrag) {
-                // For touchend, the coordinates in the event can be unreliable (0,0).
-                // Use the last valid coordinates recorded during onInteractionMove.
                 const endPoint = {
                     clientX: interactionInfo.lastX,
                     clientY: interactionInfo.lastY
@@ -116,7 +117,8 @@ function onInteractionEnd(e) {
                 render();
             }
         }
-    } else {
+    }
+    else {
         const arrowEl = e.target.closest('.queue-arrow.static, .arrow-count');
         if (arrowEl) {
             e.stopPropagation();
