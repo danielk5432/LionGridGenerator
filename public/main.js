@@ -641,12 +641,13 @@ function bootstrap() {
         zoomEnabled: true,
         panEnabled: true,
         controlIconsEnabled: false,
-		doubleClickZoomEnabled: false,
         fit: true,
         center: true,
         minZoom: 0.5,
         maxZoom: 10,
         viewportSelector: '#viewport',
+		dblClickZoomEnabled: false,
+		zoomScaleSensitivity: 0.2,
         
         // ▼ 핵심: Pan/Zoom 동작 전 실행되는 콜백 함수 추가 ▼
         beforePan: function() {
