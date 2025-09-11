@@ -85,6 +85,8 @@ function onInteractionMove(e) {
 }
 
 function onInteractionEnd(e) {
+    if (!interactionInfo) return;
+
     const debugOutput = document.getElementById('debug-output');
     if (debugOutput) {
         const point = e.changedTouches ? e.changedTouches[0] : e;
@@ -92,12 +94,6 @@ function onInteractionEnd(e) {
                                 `X: ${point.clientX}\n` +
                                 `Y: ${point.clientY}`;
     }
-    document.removeEventListener('mousemove', onInteractionMove);
-    document.removeEventListener('touchmove', onInteractionMove);
-    document.removeEventListener('mouseup', onInteractionEnd);
-    document.removeEventListener('touchend', onInteractionEnd);
-
-    if (!interactionInfo) return;
 
 
     if (panZoomInstance) panZoomInstance.enablePan();
