@@ -55,6 +55,15 @@ function onInteractionMove(e) {
     if (!interactionInfo) return;
     const point = e.touches ? e.touches[0] : e;
 
+    // --- START OF VISUAL DEBUG CODE ---
+    const debugOutput = document.getElementById('debug-output');
+    if (debugOutput) {
+        debugOutput.innerText = `Event: ${e.type}\n` +
+                                `X: ${point.clientX}\n` +
+                                `Y: ${point.clientY}`;
+    }
+    // --- END OF VISUAL DEBUG CODE ---
+
     // Store the last known position. This is crucial for touchend.
     interactionInfo.lastX = point.clientX;
     interactionInfo.lastY = point.clientY;
