@@ -14,27 +14,21 @@ export function buildAdjacency(nodes, edges) {
 	return adj;
 }
 
-/**
- * 입력값의 종류에 따라 좌표를 변환하는 범용 함수.
- * 모든 결과는 SVG 캔버스 내부 좌표계 기준으로 반환됩니다.
- * @param {Event | {x: number, y: number}} input - 마우스 이벤트 또는 좌표 객체
- * @returns {{x: number, y: number}} 변환된 SVG 좌표
- */
 export function getSvgPoint(input) {
     const svg = $('#graph');
     const pt = svg.createSVGPoint();
 
-    // 입력값이 마우스/터치 이벤트인 경우: 화면 좌표 -> SVG 좌표
-    if (input instanceof Event || (window.TouchEvent && input instanceof TouchEvent)) {
-        const point = input.changedTouches ? input.changedTouches[0] : input;
-        pt.x = point.clientX;
-        pt.y = point.clientY;
+    // Duck-typing for event-like objects (Mouse, Touch, etc.) that have clientX/Y
+    if (input.clientX !== undefined && input.clientY !== undefined) {
+        pt.x = input.clientX;
+        pt.y = input.clientY;
         
+        // Transform screen coordinates to SVG coordinates
         const ctm = svg.getScreenCTM();
         if (!ctm) return { x: 0, y: 0 };
         return pt.matrixTransform(ctm.inverse());
     } 
-    // 입력값이 좌표 객체({x, y})인 경우: 노드 절대 좌표 -> SVG 좌표
+    // For absolute coordinate objects like { x: 100, y: 200 }
     else if (typeof input === 'object' && input.x !== undefined && input.y !== undefined) {
         const viewport = $('#viewport');
         if (!viewport) return input;
@@ -42,20 +36,16 @@ export function getSvgPoint(input) {
         pt.x = input.x;
         pt.y = input.y;
 
-        // ▼▼▼ 이 부분이 수정되었습니다 ▼▼▼
-        // 1. 노드의 절대 좌표를 -> 화면 전체 좌표로 변환
-        const matrixToScreen = viewport.getCTM();
-        if (!matrixToScreen) return input;
-        const screenPoint = pt.matrixTransform(matrixToScreen);
-
-        // 2. 위에서 구한 화면 전체 좌표를 -> SVG 캔버스 좌표로 다시 변환
-        const matrixFromScreen = svg.getScreenCTM();
-        if (!matrixFromScreen) return input;
-        return screenPoint.matrixTransform(matrixFromScreen.inverse());
+        // Transform absolute node coordinates to screen-relative coordinates
+        const matrix = viewport.getCTM();
+        return pt.matrixTransform(matrix);
     }
 
+    // Fallback
     return { x: 0, y: 0 };
 }
+
+
 
 export function getNearestNodeId(x, y) {
 	let best = { id: null, d2: Infinity };
