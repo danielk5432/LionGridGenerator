@@ -26,12 +26,51 @@ export function handleTextInput() {
 		alert('그래프 JSON 파싱 오류: ' + err.message);
 	}
 }
-
 export function initializePanZoom() {
-    let eventTarget = null;
+    // Hammer.js를 사용하기 위한 커스텀 이벤트 핸들러
+    const eventsHandler = {
+        haltEventListeners: ['touchstart', 'touchend', 'touchmove', 'touchleave', 'touchcancel'],
+        init: function(options) {
+            const instance = options.instance;
+            let initialScale = 1;
+            let pannedX = 0;
+            let pannedY = 0;
 
-    $('#graph').addEventListener('mousedown', e => { eventTarget = e.target; });
-    $('#graph').addEventListener('touchstart', e => { eventTarget = e.target; });
+            // Hammer.js 초기화
+            this.hammer = Hammer(options.svgElement, {
+                inputClass: Hammer.SUPPORT_POINTER_EVENTS ? Hammer.PointerEventInput : Hammer.TouchInput
+            });
+
+            // Pinch(두 손가락 확대/축소) 제스처 활성화
+            this.hammer.get('pinch').set({ enable: true });
+
+            // Pan(한 손가락 이동) 이벤트 처리
+            this.hammer.on('panstart panmove', function(ev) {
+                // 노드 위에서 시작된 Pan은 무시 (우리 코드와의 충돌 방지)
+                if (ev.target.closest('.node')) {
+                    return;
+                }
+                if (ev.type === 'panstart') {
+                    pannedX = 0;
+                    pannedY = 0;
+                }
+                instance.panBy({ x: ev.deltaX - pannedX, y: ev.deltaY - pannedY });
+                pannedX = ev.deltaX;
+                pannedY = ev.deltaY;
+            });
+
+            // Pinch(확대/축소) 이벤트 처리
+            this.hammer.on('pinchstart pinchmove', function(ev) {
+                if (ev.type === 'pinchstart') {
+                    initialScale = instance.getZoom();
+                }
+                instance.zoomAtPoint(initialScale * ev.scale, { x: ev.center.x, y: ev.center.y });
+            });
+        },
+        destroy: function() {
+            this.hammer.destroy();
+        }
+    };
 
     panZoomInstance = svgPanZoom('#graph', {
         zoomEnabled: true,
@@ -42,17 +81,12 @@ export function initializePanZoom() {
         minZoom: 0.5,
         maxZoom: 10,
         viewportSelector: '#viewport',
-        dblClickZoomEnabled: false,
-        zoomScaleSensitivity: 0.2,
-        beforePan: function(oldPan, newPan) {
-            // Do not pan if the drag started on a node during the simulation
-            const isNode = eventTarget && eventTarget.closest('.node');
-            if (isNode && state.started) {
-                return false;
-            }
-        }
+        dblClickZoomEnabled: false, // Hammer가 더블탭을 처리하도록 비활성화
+        // ▼▼▼ 핵심: 기본 이벤트 핸들러 대신 우리가 만든 핸들러를 사용 ▼▼▼
+        customEventsHandler: eventsHandler
     });
 
+    // 창 크기 변경 이벤트 리스너
     window.addEventListener('resize', () => {
         panZoomInstance.resize();
         panZoomInstance.center();
