@@ -91,6 +91,9 @@ export function initializePanZoom() {
         panZoomInstance.resize();
         panZoomInstance.center();
     });
+
+    panZoomInstance.zoom(3);
+    panZoomInstance.pan({ x: -100, y: 100 });
 }
 
 export function loadExampleGraph() {

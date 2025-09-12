@@ -53,8 +53,6 @@ main { display: grid; grid-template-columns: 1fr 320px; gap: 12px; padding: 12px
 .queue-arrow { 
     stroke: #ef4444; 
     stroke-width: 3;
-    fill: none; 
-    marker-end: url(#queueArrowhead); 
     opacity: 0.9; 
     cursor: pointer; 
     dominant-baseline: middle;

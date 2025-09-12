@@ -1,5 +1,5 @@
 import { state, addLion, queueMove, cancelMoves } from './state.js';
-import { render, svgEl } from './renderer.js';
+import { render, svgEl, calculateArrowGeometry } from './renderer.js';
 import { screenToWorld, worldToView, screenToView, getNearestNodeId, $ } from './utils.js';
 import { panZoomInstance } from './ui.js';
 import { CONFIG } from './config.js';
@@ -128,7 +128,7 @@ function onInteractionEnd(e) {
         }
     }
     else {
-        const arrowEl = e.target.closest('.queue-arrow.static, .arrow-count');
+        const arrowEl = e.target.closest('.queue-arrow-hitbox, .arrow-count');
         if (arrowEl) {
             e.stopPropagation();
             cancelMoves(arrowEl.dataset.from, arrowEl.dataset.to);
@@ -137,46 +137,64 @@ function onInteractionEnd(e) {
 
     interactionInfo = null;
 }
-
 function drawTemporaryArrow(endPoint) {
     if (!interactionInfo) return;
-    const svg = $('#graph');
-	const arrowId = 'queue-arrow-temp';
-    let arrow = document.getElementById(arrowId);
-    const node = state.graph.nodes.find(n => n.id === interactionInfo.nodeId);
-    if (!node) return;
+    const viewport = $('#graph').querySelector('#viewport');
+    if (!viewport) return;
 
-    const startCoords = worldToView({ x: node.x, y: node.y });
-	const endCoords = screenToView(endPoint);
-    const dx = endCoords.x - startCoords.x;
-    const dy = endCoords.y - startCoords.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    let endX = endCoords.x;
-    let endY = endCoords.y;
-    const arrowheadPixelLength = CONFIG.arrowHeadLength * CONFIG.arrowStrokeWidth;
+    const tempGroupId = 'queue-arrow-temp-group';
+    let arrowGroup = document.getElementById(tempGroupId);
+    
+    const fromNode = state.graph.nodes.find(n => n.id === interactionInfo.nodeId);
+    if (!fromNode) return;
 
-    if (length > arrowheadPixelLength) {
-        endX = endCoords.x - (dx / length) * arrowheadPixelLength;
-        endY = endCoords.y - (dy / length) * arrowheadPixelLength;
-    } else if (length > 0) {
-		endX = startCoords.x + (dx / length ) * 0.1;
-		endY = startCoords.y + (dy / length ) * 0.1;
-	}
+    // 좌표를 모두 world 기준으로 계산
+    const startCoords = { x: fromNode.x, y: fromNode.y };
+    const endCoords = screenToWorld(endPoint);
 
-    if (!arrow) {
-        arrow = svgEl('line', { id: arrowId, class: 'queue-arrow', x1: startCoords.x, y1: startCoords.y, x2: endX, y2: endY, 'marker-end': 'url(#queueArrowhead)'});
-        svg.appendChild(arrow);
+    const arrowConfig = {
+        nodeRadius: 0, // 임시 화살표는 노드 경계를 고려할 필요 없음
+        arrowHeadLength: CONFIG.arrowHeadLength * CONFIG.arrowStrokeWidth,
+        arrowHeadWidth: CONFIG.arrowHeadWidth * CONFIG.arrowStrokeWidth
+    };
+
+    // 헬퍼 함수로 기하학적 데이터 계산
+    const geo = calculateArrowGeometry(startCoords, endCoords, arrowConfig);
+    if (!geo) return;
+
+    // 임시 화살표 그룹이 없으면 새로 생성
+    if (!arrowGroup) {
+        arrowGroup = svgEl('g', { id: tempGroupId, class: 'queue-arrow temp' });
+        
+        // 그룹 내부에 빈 polygon과 line을 미리 만들어 둡니다.
+        const arrowhead = svgEl('polygon', { 'fill': '#ef4444' });
+        const line = svgEl('line', { 'vector-effect': 'non-scaling-stroke' });
+        
+        arrowGroup.appendChild(line);
+        arrowGroup.appendChild(arrowhead);
+        viewport.appendChild(arrowGroup);
+    }
+    
+    // 그룹 내부의 엘리먼트들을 찾아서 속성 업데이트
+    const arrowheadEl = arrowGroup.querySelector('polygon');
+    const lineEl = arrowGroup.querySelector('line');
+
+    arrowheadEl.setAttribute('points', geo.polygonPoints);
+    
+    if (geo.shouldDrawLine) {
+        lineEl.setAttribute('x1', geo.lineStart.x);
+        lineEl.setAttribute('y1', geo.lineStart.y);
+        lineEl.setAttribute('x2', geo.lineEnd.x);
+        lineEl.setAttribute('y2', geo.lineEnd.y);
+        lineEl.style.display = 'inline';
     } else {
-        arrow.setAttribute('x1', startCoords.x);
-        arrow.setAttribute('y1', startCoords.y);
-        arrow.setAttribute('x2', endX);
-        arrow.setAttribute('y2', endY);
+        lineEl.style.display = 'none'; // 거리가 짧으면 선을 숨김
     }
 }
 
 function removeTemporaryArrow() {
-    const arrow = document.getElementById('queue-arrow-temp');
-	if (arrow) arrow.remove();
+    const arrowGroup = document.getElementById('queue-arrow-temp-group');
+    if (arrowGroup) arrowGroup.remove();
 }
 
 function handleMoveQueue(fromNodeId, endPoint) {
@@ -190,6 +208,7 @@ function handleMoveQueue(fromNodeId, endPoint) {
 		const lionWithoutMove = lionsOnNode.find(l => !state.queuedMoves.has(l.id));
 		if (lionWithoutMove) {
 			queueMove(lionWithoutMove.id, toNodeId);
+            console.log(`Queued move for Lion ${lionWithoutMove.id} from Node ${fromNodeId} to Node ${toNodeId}`);
 		}
 	}
 }
