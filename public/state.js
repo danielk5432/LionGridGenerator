@@ -8,6 +8,8 @@ export const state = {
 	queuedMoves: new Map(), // lionId -> targetNodeId
 	contaminated: new Set(), // nodeId set
 	started: false,
+    freedraw: false,
+    temparrows: new Array(), // 임시 화살표들 저장용
 	lastLionId: 0,
 };
 
@@ -50,6 +52,17 @@ export function queueMove(lionId, targetNodeId) {
 	$('#moveBtn').disabled = state.queuedMoves.size === 0;
 	render();
 }
+
+export function drawTempArrow(fromNodeId, toNodeId) {
+    state.temparrows.push({ fromNodeId, toNodeId });
+	render();
+}
+
+export function deleteTempArrow(fromNodeId, toNodeId) {
+    state.temparrows = state.temparrows.filter(arrow => !(arrow.fromNodeId === fromNodeId && arrow.toNodeId === toNodeId));
+    render();
+}
+
 
 export function cancelMoves(fromNodeId, toNodeId) {
 	const lionsToCancel = [];

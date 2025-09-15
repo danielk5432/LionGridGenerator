@@ -22,6 +22,7 @@ export function render() {
     renderEdges(viewport);
     renderNodes(viewport);
     renderQueueArrows(viewport);
+    renderTemporaryArrow(viewport);
 }
 
 /**
@@ -73,8 +74,6 @@ function clearSvg() {
             viewport.removeChild(viewport.firstChild);
         }
     }
-
-    Array.from(svg.querySelectorAll('.queue-arrow:not(.static)')).forEach(el => el.remove());
 }
 
 
@@ -272,5 +271,74 @@ export function renderQueueArrows(viewport) {
             text.textContent = count.toString();
             viewport.appendChild(text);
         }
+    }
+}
+
+
+export function renderTemporaryArrow(viewport) {
+    console.log('Rendering temporary arrows:', state.temparrows);
+    const nodeRadius = CONFIG.nodeRadius;
+    const arrowConfig = {
+        nodeRadius: nodeRadius,
+        arrowHeadLength: CONFIG.arrowHeadLength * CONFIG.arrowStrokeWidth,
+        arrowHeadWidth: CONFIG.arrowHeadWidth * CONFIG.arrowStrokeWidth
+    };
+
+    for (const { fromNodeId, toNodeId } of state.temparrows) {
+        const fromNode = state.graph.nodes.find((n) => n.id === fromNodeId);
+        const toNode = state.graph.nodes.find((n) => n.id === toNodeId);
+        if (!fromNode || !toNode) continue;
+
+        // 헬퍼 함수로 모든 계산을 위임합니다.
+        const geo = calculateArrowGeometry(fromNode, toNode, arrowConfig);
+        if (!geo) continue;
+
+        // 1. 화살촉 그리기
+        const arrowhead = svgEl('polygon', {
+            class: 'queue-arrow static',
+            points: geo.polygonPoints,
+            fill: '#ef4444'
+        });
+        viewport.appendChild(arrowhead);
+        
+        // 2. 선 그리기 (필요한 경우)
+        if (geo.shouldDrawLine) {
+            const line = svgEl('line', {
+                class: 'queue-arrow static',
+                x1: geo.lineStart.x, y1: geo.lineStart.y,
+                x2: geo.lineEnd.x, y2: geo.lineEnd.y
+            });
+            viewport.appendChild(line);
+        }
+
+
+        // 클릭을 위한 히트박스 (항상)
+        const dx = toNode.x - fromNode.x;
+        const dy = toNode.y - fromNode.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        let hitboxX1 = fromNode.x;
+        let hitboxY1 = fromNode.y;
+        let hitboxX2 = toNode.x;
+        let hitboxY2 = toNode.y;
+
+        const ux = dx / length;
+        const uy = dy / length;
+
+        hitboxX1 = fromNode.x + ux * nodeRadius;
+        hitboxY1 = fromNode.y + uy * nodeRadius;
+        hitboxX2 = toNode.x - ux * nodeRadius;
+        hitboxY2 = toNode.y - uy * nodeRadius;
+        
+        // 계산된 좌표로 히트박스를 생성합니다.
+        const hitboxLine = svgEl('line', {
+            class: 'temp-arrow-hitbox',
+            x1: hitboxX1, y1: hitboxY1,
+            x2: hitboxX2, y2: hitboxY2,
+            'stroke': 'transparent',
+            'stroke-width': '20',
+            'data-from': fromNodeId,
+            'data-to': toNodeId
+        });
+        viewport.appendChild(hitboxLine);
     }
 }

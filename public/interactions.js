@@ -1,4 +1,4 @@
-import { state, addLion, queueMove, cancelMoves } from './state.js';
+import { state, addLion, queueMove, cancelMoves, drawTempArrow, deleteTempArrow } from './state.js';
 import { render, svgEl, calculateArrowGeometry } from './renderer.js';
 import { screenToWorld, worldToView, screenToView, getNearestNodeId, $ } from './utils.js';
 import { panZoomInstance } from './ui.js';
@@ -8,9 +8,7 @@ let interactionInfo = null;
 
 function isDragSourceValid(nodeId) {
     if (!nodeId) return false;
-    return state.lions.some(lion => 
-        lion.nodeId === nodeId && !state.queuedMoves.has(lion.id)
-    );
+    return true
 }
 
 function onInteractionStart(e) {
@@ -133,10 +131,17 @@ function onInteractionEnd(e) {
             e.stopPropagation();
             cancelMoves(arrowEl.dataset.from, arrowEl.dataset.to);
         }
+        const tempArrowEl = e.target.closest('.temp-arrow-hitbox');
+        if (tempArrowEl) {
+            e.stopPropagation();
+            deleteTempArrow(tempArrowEl.dataset.from, tempArrowEl.dataset.to);
+        }
+        
     }
 
     interactionInfo = null;
 }
+
 function drawTemporaryArrow(endPoint) {
     if (!interactionInfo) return;
     const viewport = $('#graph').querySelector('#viewport');
@@ -201,6 +206,7 @@ function handleMoveQueue(fromNodeId, endPoint) {
     const worldCoords = screenToWorld(endPoint);
 	const toNodeId = getNearestNodeId(worldCoords.x, worldCoords.y);
     if (!toNodeId) return;
+    let drawn = false;
 
 	const neighbors = state.graph.adjacency.get(fromNodeId) || new Set();
 	if (neighbors.has(toNodeId)) {
@@ -209,7 +215,13 @@ function handleMoveQueue(fromNodeId, endPoint) {
 		if (lionWithoutMove) {
 			queueMove(lionWithoutMove.id, toNodeId);
             console.log(`Queued move for Lion ${lionWithoutMove.id} from Node ${fromNodeId} to Node ${toNodeId}`);
+            drawn = true;
 		}
+	}
+    
+    if (!drawn) {
+        drawTempArrow(fromNodeId, toNodeId);
+        console.log(`Draw Temp Arrow from Node ${fromNodeId} to Node ${toNodeId}`);
 	}
 }
 

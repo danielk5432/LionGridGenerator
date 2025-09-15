@@ -41,6 +41,7 @@ export function executeMoves() {
 	spreadContaminationFromPositions(contaminationBeforeMove, usedEdges, lionNodes);
 	
 	state.queuedMoves.clear();
+    state.temparrows = [];
 	$('#moveBtn').disabled = true;
 	render();
 }

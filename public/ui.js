@@ -82,7 +82,6 @@ export function initializePanZoom() {
         maxZoom: 10,
         viewportSelector: '#viewport',
         dblClickZoomEnabled: false, // Hammer가 더블탭을 처리하도록 비활성화
-        // ▼▼▼ 핵심: 기본 이벤트 핸들러 대신 우리가 만든 핸들러를 사용 ▼▼▼
         customEventsHandler: eventsHandler
     });
 
@@ -92,8 +91,8 @@ export function initializePanZoom() {
         panZoomInstance.center();
     });
 
-    panZoomInstance.zoom(3);
-    panZoomInstance.pan({ x: -100, y: 100 });
+    panZoomInstance.zoom(2);
+    panZoomInstance.pan({ x: -100, y: -100 });
 }
 
 export function loadExampleGraph() {
