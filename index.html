@@ -26,8 +26,6 @@
         <svg id="graph" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
       <aside id="sidebar">
-        <h3>Graph Input</h3>
-        <textarea id="graphInput" placeholder="Enter graph JSON here..." rows="15"></textarea>
         <h3>Instructions</h3>
         <ol>
           <li>위 텍스트 영역에 그래프 JSON을 입력하세요.</li>
@@ -37,6 +35,10 @@
           <li>Move Lions 버튼을 누르면 모든 🦁가 동시에 이동합니다.</li>
           <li>그 후 🦠이 인접 노드로 1칸 확산합니다. 🦁가 있는 노드에는 퍼지지 않습니다.</li>
         </ol>
+        <h3>Graph Input</h3>
+        <textarea id="graphInput" placeholder="Enter graph JSON here..." rows="15"></textarea>
+        <h3>Available Graphs</h3>
+        <div id="graph-list-container"></div>
       </aside>
     </main>
 

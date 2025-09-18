@@ -4,11 +4,60 @@ import { normalizeGraph, $ } from './utils.js';
 
 export let panZoomInstance = null;
 
+// --- New Embedded Graph List Functions ---
+
+async function populateGraphList() {
+  const container = $('#graph-list-container');
+  if (!container) return;
+
+  try {
+    const response = await fetch('public/graphs/all-graphs.json'); // Updated path
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const { graphs } = await response.json();
+
+    graphs.forEach(graphInfo => {
+      const item = document.createElement('div');
+      item.className = 'graph-list-item';
+      item.innerHTML = `
+        <h4>${graphInfo.name}</h4>
+        <p>${graphInfo.description}</p>
+      `;
+      container.appendChild(item);
+
+      // Add click event to load the graph
+      item.addEventListener('click', async () => {
+        try {
+          const graphResponse = await fetch(graphInfo.filePath);
+          if (!graphResponse.ok) throw new Error(`Failed to fetch graph data from ${graphInfo.filePath}`);
+          const graphData = await graphResponse.json();
+
+          // 1. Populate the textarea
+          $('#graphInput').value = JSON.stringify(graphData, null, 2);
+          // 2. Trigger the existing load function
+          handleTextInput();
+        } catch (err) {
+          console.error('Error loading individual graph:', err);
+          alert(err.message);
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('Could not populate graph list:', error);
+    container.innerHTML = '<p style="color: red; padding: 10px;">Failed to load graph list.</p>';
+  }
+  panZoomInstance.zoom(3);
+    panZoomInstance.pan({ x: -100, y: -200 });
+}
+
 export function setupUI() {
 	$('#loadBtn').addEventListener('click', handleTextInput);
 	$('#startBtn').addEventListener('click', startSimulation);
 	$('#moveBtn').addEventListener('click', executeMoves);
 	$('#resetBtn').addEventListener('click', resetAll);
+
+	// Populate the list of available graphs on startup
+	populateGraphList();
 }
 
 export function handleTextInput() {

@@ -4,7 +4,6 @@
 html, body {
     height: 100%; /* html과 body의 높이를 브라우저 창 전체 높이로 설정 */
     margin: 0;
-    overflow: hidden; /* 페이지 전체에 스크롤바가 생기지 않도록 방지 */
 }
 
 /* body를 Flex 컨테이너로 설정 */
@@ -23,24 +22,35 @@ main {
     padding: 12px;
 }
 
-/* 캔버스 래퍼의 최소 높이 제거 또는 수정 */
-#canvasWrapper {
-    min-height: auto; /* 기존의 min-height: 600px 를 제거해야 키가 작은 창에서 깨지지 않음 */
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    overflow: hidden;
-    display: flex;
+#canvasWrapper { 
+    background: white; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 8px; 
+    aspect-ratio: 4 / 3; 
+    width: 100%; 
+    height: 100%; 
+    align-self: start; 
+    overflow: hidden; 
+    display: flex; 
+    min-height: 0;
 }
+
 header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background: white; position: sticky; top: 0; z-index: 10; }
 h1 { margin: 0 0 8px; font-size: 20px; }
 .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
 .legend { margin-top: 6px; display: flex; gap: 12px; color: #444; font-size: 14px; }
-main { display: grid; grid-template-columns: 1fr 320px; gap: 12px; padding: 12px; }
-#canvasWrapper { background: white; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 600px; overflow: hidden; display: flex; }
-#graph { width: 100%; height: 100%; }
-#sidebar { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+#graph { width: 100%; height: 100%; object-fit: contain; }
+#sidebar { 
+    background: white; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 8px; 
+    padding: 12px; 
+    min-height: 0; 
+    height: 100%; 
+    overflow-y: auto; 
+}
+
 #graphInput { width: 100%; font-family: 'Courier New', monospace; font-size: 12px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical; }
 
 .node { cursor: pointer; }

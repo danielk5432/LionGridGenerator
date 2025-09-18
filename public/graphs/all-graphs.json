@@ -1,0 +1,18 @@
+{
+  "graphs": [
+    {
+      "id": "example-graph",
+      "name": "기본 예시 그래프",
+      "description": "8개의 노드와 9개의 엣지를 가진 기본 그래프입니다.",
+      "minLions": 3,
+      "filePath": "public/graphs/example-graph.json"
+    },
+    {
+      "id": "example-graph1",
+      "name": "기본 예시 그래프",
+      "description": "8개의 노드와 9개의 엣지를 가진 기본 그래프입니다.",
+      "minLions": 3,
+      "filePath": "public/graphs/example-graph.json"
+    }
+  ]
+}

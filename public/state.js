@@ -14,7 +14,7 @@ export const state = {
 export function resetAll() {
 	state.lions = [];
 	state.queuedMoves.clear();
-	state.contaminated.clear();
+	state.contaminated = null;
 	state.started = false;
 	state.lastLionId = 0;
 	$('#moveBtn').disabled = true;
