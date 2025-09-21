@@ -25,17 +25,17 @@ main {
     padding: 12px;
 }
 
-#canvasWrapper { 
+#canvasWrapper {
     background: white; 
     border: 1px solid #e5e7eb; 
     border-radius: 8px; 
-    aspect-ratio: 4 / 3; 
     width: 100%; 
-    height: 100%; 
+    height: auto;          /* 기본 fallback */
+    min-height: 300px;     /* aspect-ratio 미지원 브라우저용 */
+    aspect-ratio: 4 / 3;   /* 지원 브라우저에서는 정상 작동 */
     align-self: start; 
     overflow: hidden; 
     display: flex; 
-    min-height: 0;
 }
 
 header { 
@@ -136,9 +136,8 @@ h1 { margin: 0 0 8px; font-size: 20px; }
 .panel { font-size: 14px; color: #444; }
 .panel .row { display: flex; justify-content: space-between; margin: 6px 0; }
 
-/* 버튼 스타일 */
 button {
-    border: none;         /* 불필요한 브라우저 기본 테두리 제거 */
+    border: none;
     cursor: pointer;
     padding: 10px 18px;
     margin: 4px;
@@ -147,7 +146,9 @@ button {
     border-radius: 8px;
     transition: all 0.2s ease-in-out;
     text-align: center;
-    display: inline-block;  /* 크로스 브라우저 호환성 보장 */
+    display: flex;           /* flex로 바꿔 크로스 브라우저 안정성 확보 */
+    align-items: center;
+    justify-content: center;
 }
 
 /* 색상 변형 */
@@ -164,12 +165,13 @@ button {
 .btn-success:hover { background: #166534; }
 
 .btn-move {
-    background: #f59e0b;   /* 보라색 (indigo-600) */
+    background: #f59e0b;
     color: white;
 }
 .btn-move:hover {
-    background: #b45309;   /* hover 시 진보라 (indigo-800) */
+    background: #d97706;
 }
+
 
 .btn-danger {
     background: #dc2626; 
