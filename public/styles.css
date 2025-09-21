@@ -54,6 +54,7 @@ h1 { margin: 0 0 8px; font-size: 20px; }
     align-items: center; 
     flex-wrap: wrap; 
 }
+
 .controls button:disabled { 
     opacity: 0.5; 
     cursor: not-allowed; 
@@ -146,9 +147,10 @@ button {
     border-radius: 8px;
     transition: all 0.2s ease-in-out;
     text-align: center;
-    display: flex;           /* flex로 바꿔 크로스 브라우저 안정성 확보 */
+    display: flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
 }
 
 /* 색상 변형 */
@@ -207,10 +209,17 @@ button {
     color: #4b5563;
 }
 
-/* 반응형 */
-@media (max-width: 900px) {
-  main {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
+@media (max-width: 600px) {
+  .controls {
+    flex-wrap: nowrap;      /* 줄바꿈 방지 */
+    overflow-x: auto;       /* 화면에 다 안 들어가면 가로 스크롤 */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .controls button {
+    padding: 8px 12px;      /* 버튼 패딩 축소 */
+    font-size: 12px;        /* 글자 크기 축소 */
+    flex: 1;                /* 버튼들이 공간 나눠 가지기 */
+    min-width: 70px;        /* 버튼이 너무 작아지지 않도록 */
   }
 }
