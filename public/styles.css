@@ -211,15 +211,15 @@ button {
 
 @media (max-width: 600px) {
   .controls {
-    flex-wrap: nowrap;      /* 줄바꿈 방지 */
-    overflow-x: auto;       /* 화면에 다 안 들어가면 가로 스크롤 */
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;     /* 줄바꿈 방지 */
+    gap: 4px;              /* 버튼 간격 줄이기 */
   }
 
   .controls button {
-    padding: 8px 12px;      /* 버튼 패딩 축소 */
-    font-size: 12px;        /* 글자 크기 축소 */
-    flex: 1;                /* 버튼들이 공간 나눠 가지기 */
-    min-width: 70px;        /* 버튼이 너무 작아지지 않도록 */
+    flex: 1 1 0;           /* 가로 공간 균등 분할 */
+    padding: 6px 8px;      /* 패딩 줄이기 */
+    font-size: 11px;       /* 글자 크기 줄이기 */
+    white-space: nowrap;   /* 줄바꿈 방지 */
+    min-width: 0;          /* flex 때문에 강제로 줄어들도록 */
   }
 }
