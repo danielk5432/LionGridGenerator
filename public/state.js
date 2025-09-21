@@ -1,5 +1,4 @@
 import { render } from './renderer.js';
-import { initContamination } from './game.js';
 import { buildAdjacency, $ } from './utils.js';
 
 export const state = {
@@ -14,7 +13,7 @@ export const state = {
 export function resetAll() {
 	state.lions = [];
 	state.queuedMoves.clear();
-	state.contaminated = null;
+	state.contaminated.clear();
 	state.started = false;
 	state.lastLionId = 0;
 	$('#moveBtn').disabled = true;
@@ -29,14 +28,6 @@ export function setGraph(g) {
 	state.graph.edges = g.edges;
 	state.graph.adjacency = buildAdjacency(g.nodes, g.edges);
 	resetAll();
-}
-
-export function startSimulation() {
-	if (state.started) return;
-	state.started = true;
-	initContamination();
-	$('#moveBtn').disabled = state.queuedMoves.size === 0;
-	render();
 }
 
 export function addLion(nodeId) {

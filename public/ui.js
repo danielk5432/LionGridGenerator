@@ -1,5 +1,5 @@
-import { state, startSimulation, resetAll, setGraph } from './state.js';
-import { executeMoves } from './game.js';
+import { resetAll, setGraph } from './state.js';
+import { startSimulation, executeMoves } from './game.js';
 import { normalizeGraph, $ } from './utils.js';
 
 export let panZoomInstance = null;

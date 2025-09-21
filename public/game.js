@@ -73,6 +73,14 @@ function spreadContaminationFromPositions(contaminationPositions, excludedEdges,
 	state.contaminated = next;
 }
 
+export function startSimulation() {
+	if (state.started) return;
+	state.started = true;
+	initContamination();
+	$('#moveBtn').disabled = state.queuedMoves.size === 0;
+	render();
+}
+
 export function initContamination() {
 	state.contaminated.clear();
 	const lionNodes = new Set(state.lions.map((l) => l.nodeId));
