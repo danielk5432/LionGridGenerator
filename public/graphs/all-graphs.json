@@ -1,18 +1,46 @@
 {
   "graphs": [
     {
-      "id": "example-graph",
-      "name": "기본 예시 그래프",
-      "description": "8개의 노드와 9개의 엣지를 가진 기본 그래프입니다.",
-      "minLions": 3,
-      "filePath": "public/graphs/example-graph.json"
+      "id": "chain",
+      "name": "Chain",
+      "description": "Chain graph of length 6",
+      "minLions": 1,
+      "filePath": "public/graphs/chain.json"
     },
     {
-      "id": "example-graph1",
-      "name": "기본 예시 그래프",
-      "description": "8개의 노드와 9개의 엣지를 가진 기본 그래프입니다.",
+      "id": "cycle",
+      "name": "Cycle",
+      "description": "Cycle graph of length 6",
+      "minLions": 2,
+      "filePath": "public/graphs/cycle.json"
+    },
+    {
+      "id": "cycle2",
+      "name": "Cycle2",
+      "description": "Cycle graph with one additional vertex",
       "minLions": 3,
-      "filePath": "public/graphs/example-graph.json"
+      "filePath": "public/graphs/cycle2.json"
+    },
+    {
+      "id": "grid",
+      "name": "Grid",
+      "description": "5*5 Grid Graph",
+      "minLions": 5,
+      "filePath": "public/graphs/grid.json"
+    },
+    {
+      "id": "counterexample1",
+      "name": "Counterexample1",
+      "description": "Counterexample of Subgraph Question - without additaional edge",
+      "minLions": 4,
+      "filePath": "public/graphs/counterexample1.json"
+    },
+    {
+      "id": "counterexample2",
+      "name": "Counterexample2",
+      "description": "Counterexample of Subgraph Question - with additaional edge",
+      "minLions": 3,
+      "filePath": "public/graphs/counterexample2.json"
     }
   ]
 }
