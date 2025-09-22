@@ -46,8 +46,8 @@ async function populateGraphList() {
     console.error('Could not populate graph list:', error);
     container.innerHTML = '<p style="color: red; padding: 10px;">Failed to load graph list.</p>';
   }
-  panZoomInstance.zoom(3);
-    panZoomInstance.pan({ x: -100, y: -200 });
+  panZoomInstance.zoom(2);
+    panZoomInstance.pan({ x: 150, y: -150 });
 }
 
 export function setupUI() {
@@ -147,23 +147,25 @@ export function initializePanZoom() {
 
 export function loadExampleGraph() {
 	const exampleGraph = {
-		"nodes": [
-			{"id": 1, "x": 100, "y": 100},
-			{"id": 2, "x": 200, "y": 100},
-			{"id": 3, "x": 300, "y": 100},
-			{"id": 4, "x": 100, "y": 200},
-			{"id": 5, "x": 200, "y": 200},
-			{"id": 6, "x": 300, "y": 200},
-			{"id": 7, "x": 150, "y": 150},
-			{"id": 8, "x": 250, "y": 150}
-		],
-		"edges": [
-			{"from": 1, "to": 2}, {"from": 2, "to": 3}, {"from": 1, "to": 4},
-			{"from": 2, "to": 5}, {"from": 3, "to": 6}, {"from": 4, "to": 5},
-			{"from": 5, "to": 6}, {"from": 1, "to": 7}, {"from": 2, "to": 7},
-			{"from": 4, "to": 7}, {"from": 5, "to": 7}, {"from": 2, "to": 8},
-			{"from": 3, "to": 8}, {"from": 5, "to": 8}, {"from": 6, "to": 8}
-		]
-	};
+    "nodes": [
+      { "id": 1, "x": 200, "y": 100 },
+      { "id": 2, "x": 287, "y": 150 },
+      { "id": 3, "x": 287, "y": 250 },
+      { "id": 4, "x": 200, "y": 300 },
+      { "id": 5, "x": 113, "y": 250 },
+      { "id": 6, "x": 113, "y": 150 },
+      { "id": 7, "x": 200, "y": 200 }
+    ],
+    "edges": [
+      { "from": 1, "to": 2 },
+      { "from": 2, "to": 3 },
+      { "from": 3, "to": 4 },
+      { "from": 4, "to": 5 },
+      { "from": 5, "to": 6 },
+      { "from": 6, "to": 1 },
+      { "from": 1, "to": 7 },
+      { "from": 7, "to": 4 }
+    ]
+  };
 	$('#graphInput').value = JSON.stringify(exampleGraph, null, 2);
 }
