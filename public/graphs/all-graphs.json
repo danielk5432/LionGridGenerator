@@ -1,6 +1,13 @@
 {
   "graphs": [
     {
+      "id": "house",
+      "name": "House",
+      "description": "A simple house structure (drawn in poster)",
+      "minLions": 3,
+      "filePath": "public/graphs/house.json"
+    },
+    {
       "id": "chain",
       "name": "Chain",
       "description": "Chain graph of length 6",
