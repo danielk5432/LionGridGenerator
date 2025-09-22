@@ -129,6 +129,8 @@ function renderNodes(viewport) {
 	}
 }
 
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
 export async function animateMoves(moves) {
     const svg = $('#graph');
     const viewport = svg.querySelector('#viewport');
@@ -172,11 +174,12 @@ export async function animateMoves(moves) {
             let startTime = null;
             const animate = (timestamp) => {
                 if (!startTime) startTime = timestamp;
-                const progress = (timestamp - startTime) / CONFIG.animationDuration;
+                const linearProgress = Math.min(1, (timestamp - startTime) / CONFIG.animationDuration);
+                const easedProgress = easeOutCubic(linearProgress);
 
-                if (progress < 1) {
-                    const newX = from.x + dx * progress;
-                    const newY = from.y + dy * progress;
+                if (linearProgress < 1) {
+                    const newX = from.x + dx * easedProgress;
+                    const newY = from.y + dy * easedProgress;
                     icon.setAttribute('x', newX);
                     icon.setAttribute('y', newY + 2.5);
                     requestAnimationFrame(animate);

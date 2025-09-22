@@ -5,5 +5,5 @@ export const CONFIG = {
     arrowHeadLength: 10,
     arrowHeadWidth: 7,
     arrowStrokeWidth: 1.5,
-    animationDuration: 400, // ms
+    animationDuration: 300, // ms
 };
