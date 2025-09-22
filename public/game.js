@@ -1,76 +1,109 @@
 import { state } from './state.js';
-import { render } from './renderer.js';
+import { render, animateMoves } from './renderer.js';
 import { $ } from './utils.js';
 
-export function executeMoves() {
+function calculateContaminationSpread(contaminationPositions, excludedEdges, lionNodes) {
+    const nextContaminated = new Set();
+    const newSpreads = [];
+    const nodeMap = new Map(state.graph.nodes.map(n => [n.id, n]));
+
+    // Contaminated nodes that are not final lion positions remain contaminated
+    for (const nodeId of contaminationPositions) {
+        if (!lionNodes.has(nodeId)) {
+            nextContaminated.add(nodeId);
+        }
+    }
+
+    // Spread from original positions
+    for (const fromId of contaminationPositions) {
+        const neighbors = state.graph.adjacency.get(fromId) || new Set();
+        for (const toId of neighbors) {
+            // Don't spread to a node that will have a lion
+            if (lionNodes.has(toId)) continue;
+
+            // Don't spread along an edge used by a lion
+            const edgeKey = `${fromId}->${toId}`;
+            const reverseEdgeKey = `${toId}->${fromId}`;
+            if (excludedEdges.has(edgeKey) || excludedEdges.has(reverseEdgeKey)) continue;
+
+            // If the target is newly contaminated, create animation data
+            if (!nextContaminated.has(toId)) {
+                const fromNode = nodeMap.get(fromId);
+                const toNode = nodeMap.get(toId);
+                if (fromNode && toNode) {
+                    newSpreads.push({ from: fromNode, to: toNode, type: 'contamination' });
+                }
+            }
+            nextContaminated.add(toId);
+        }
+    }
+    return { nextContaminated, newSpreads };
+}
+
+
+export async function executeMoves() {
 	if (state.queuedMoves.size === 0) return;
-	
-	// 1. Store contamination positions before lion moves
+    $('#moveBtn').disabled = true;
+
+	// 1. Store pre-move state
 	const contaminationBeforeMove = new Set(state.contaminated);
-	
-	// 2. Validate moves: target must be adjacent
+	const animationData = [];
+	const nodeMap = new Map(state.graph.nodes.map(n => [n.id, n]));
+
+	// 2. Validate lion moves
 	const validMoves = [];
 	for (const lion of state.lions) {
-		const target = state.queuedMoves.get(lion.id);
-		if (target == null) continue;
+		const targetId = state.queuedMoves.get(lion.id);
+		if (targetId == null) continue;
+
+		const fromNode = nodeMap.get(lion.nodeId);
+		const toNode = nodeMap.get(targetId);
 		const neighbors = state.graph.adjacency.get(lion.nodeId) || new Set();
-		if (neighbors.has(target)) {
-			validMoves.push({ lion, target, fromNodeId: lion.nodeId });
+
+		if (fromNode && toNode && neighbors.has(targetId)) {
+			validMoves.push({ lion, target: targetId, fromNodeId: lion.nodeId });
+			animationData.push({ from: fromNode, to: toNode, type: 'lion' });
 		}
 	}
-	
-	// 3. Apply lion moves simultaneously
-	for (const mv of validMoves) {
-		mv.lion.nodeId = mv.target;
+
+	if (validMoves.length === 0) {
+		state.queuedMoves.clear();
+		$('#moveBtn').disabled = true;
+		render();
+		return;
 	}
-	
-	// 4. Remove contamination from nodes where lions are now located
-	const lionNodes = new Set(state.lions.map(l => l.nodeId));
-	for (const nodeId of lionNodes) {
-		state.contaminated.delete(nodeId);
-	}
-	
-	// 5. Spread contamination from stored positions, excluding edges used by lions and lion nodes
+
+    // 3. Calculate final state and contamination animations
+    const finalLionNodes = new Set();
+    state.lions.forEach(l => {
+        const move = validMoves.find(mv => mv.lion.id === l.id);
+        finalLionNodes.add(move ? move.target : l.nodeId);
+    });
+
 	const usedEdges = new Set();
-	for (const mv of validMoves) {
+	validMoves.forEach(mv => {
 		const edgeKey = `${mv.fromNodeId}->${mv.target}`;
 		const reverseEdgeKey = `${mv.target}->${mv.fromNodeId}`;
 		usedEdges.add(edgeKey);
 		usedEdges.add(reverseEdgeKey);
+	});
+
+    const { nextContaminated, newSpreads } = calculateContaminationSpread(contaminationBeforeMove, usedEdges, finalLionNodes);
+    animationData.push(...newSpreads);
+
+	// 4. Animate everything
+	await animateMoves(animationData);
+
+	// 5. Apply final state
+	for (const mv of validMoves) {
+		mv.lion.nodeId = mv.target;
 	}
-	spreadContaminationFromPositions(contaminationBeforeMove, usedEdges, lionNodes);
-	
+    state.contaminated = nextContaminated;
+
+	// 6. Finalize
 	state.queuedMoves.clear();
 	$('#moveBtn').disabled = true;
 	render();
-}
-
-function spreadContaminationFromPositions(contaminationPositions, excludedEdges, lionNodes) {
-	// Start with stored contamination positions, but remove lion nodes
-	const next = new Set();
-	for (const nodeId of contaminationPositions) {
-		if (!lionNodes.has(nodeId)) {
-			next.add(nodeId);
-		}
-	}
-	
-	// Spread from these positions, excluding edges used by lions and lion nodes
-	for (const nodeId of contaminationPositions) {
-		const neighbors = state.graph.adjacency.get(nodeId) || new Set();
-		for (const nb of neighbors) {
-			// Don't spread to lion nodes
-			if (!lionNodes.has(nb)) {
-				// Check if this edge was used by lions
-				const edgeKey = `${nodeId}->${nb}`;
-				const reverseEdgeKey = `${nb}->${nodeId}`;
-				if (!excludedEdges.has(edgeKey) && !excludedEdges.has(reverseEdgeKey)) {
-					next.add(nb);
-				}
-			}
-		}
-	}
-	
-	state.contaminated = next;
 }
 
 export function startSimulation() {

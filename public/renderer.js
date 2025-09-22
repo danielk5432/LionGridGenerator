@@ -2,6 +2,9 @@ import { state } from './state.js';
 import { CONFIG } from './config.js';
 import { $, svgNS } from './utils.js';
 
+// A set of node IDs that are currently part of an animation
+const animatingNodes = new Set();
+
 export function svgEl(tag, attrs = {}) {
 	const el = document.createElementNS(svgNS, tag);
 	for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
@@ -65,16 +68,14 @@ export function initDefs(svg) {
 }
 
 function clearSvg() {
-    const svg = $('#graph');
-    const viewport = svg.querySelector('#viewport');
+    const viewport = $('#graph #viewport');
+    if (!viewport) return;
 
-    if (viewport) {
-        while (viewport.firstChild) {
-            viewport.removeChild(viewport.firstChild);
-        }
-    }
+    // Remove only the elements that are managed by the render function
+    viewport.querySelectorAll('.node, .edge, .queue-arrow.static, .queue-arrow-hitbox, .arrow-count').forEach(el => el.remove());
 
-    Array.from(svg.querySelectorAll('.queue-arrow:not(.static)')).forEach(el => el.remove());
+    // Also clear any temporary drag arrows that might be left over
+    Array.from(document.querySelectorAll('.queue-arrow:not(.static)')).forEach(el => el.remove());
 }
 
 
@@ -98,32 +99,103 @@ function renderNodes(viewport) {
 		g.appendChild(svgEl('circle', { cx: node.x, cy: node.y, r: nodeRadius }));
 
 		const lionsHere = lionNodes.get(node.id) || 0;
-		if (lionsHere > 0) {
-			const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2.5, 'text-anchor': 'middle' });
-				text.textContent = '🦁';
-				g.appendChild(text);
-			if (lionsHere != 1) {
-				const countText = svgEl('text', { 
-					class: 'lion-count', 
-					x: node.x + 11, 
-					y: node.y + 6, 
-					'text-anchor': 'middle'
-				});
-				countText.textContent = `x${lionsHere}`;
-				g.appendChild(countText);
-			}
-		}
 
-		if (state.started && state.contaminated.has(node.id) && lionsHere === 0) {
-			const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2, 'text-anchor': 'middle' });
-			text.textContent = '🦠';
-			g.appendChild(text);
-		}
+        // Only render icons if the node is not a starting point for an animation
+        if (!animatingNodes.has(node.id)) {
+            if (lionsHere > 0) {
+                const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2.5, 'text-anchor': 'middle' });
+                text.textContent = '🦁';
+                g.appendChild(text);
+                if (lionsHere != 1) {
+                    const countText = svgEl('text', { 
+                        class: 'lion-count', 
+                        x: node.x + 11, 
+                        y: node.y + 6, 
+                        'text-anchor': 'middle'
+                    });
+                    countText.textContent = `x${lionsHere}`;
+                    g.appendChild(countText);
+                }
+            }
+
+            if (state.started && state.contaminated.has(node.id) && lionsHere === 0) {
+                const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2, 'text-anchor': 'middle' });
+                text.textContent = '🦠';
+                g.appendChild(text);
+            }
+        }
 
 		viewport.appendChild(g);
 	}
 }
 
+export async function animateMoves(moves) {
+    const svg = $('#graph');
+    const viewport = svg.querySelector('#viewport');
+    if (!viewport) return;
+
+    let animationLayer = viewport.querySelector('#animation-layer');
+    if (animationLayer) animationLayer.remove();
+    
+    animationLayer = svgEl('g', { id: 'animation-layer' });
+
+    // Mark nodes as animating and render everything else first
+    animatingNodes.clear();
+    for (const move of moves) {
+        if (move.type === 'lion') {
+            animatingNodes.add(move.from.id);
+        }
+    }
+    render();
+
+    // Add the animation layer on top of the static render
+    viewport.appendChild(animationLayer);
+
+    const animationPromises = moves.map(move => {
+        return new Promise(resolve => {
+            const { from, to, type } = move;
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+
+            const icon = svgEl('text', {
+                class: 'emoji',
+                x: from.x,
+                y: from.y + 2.5,
+                'text-anchor': 'middle',
+                'font-size': '20px', // Explicitly set font size
+                'dominant-baseline': 'middle',
+                'alignment-baseline': 'middle'
+            });
+            icon.textContent = type === 'lion' ? '🦁' : '🦠';
+            animationLayer.appendChild(icon);
+
+            let startTime = null;
+            const animate = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const progress = (timestamp - startTime) / CONFIG.animationDuration;
+
+                if (progress < 1) {
+                    const newX = from.x + dx * progress;
+                    const newY = from.y + dy * progress;
+                    icon.setAttribute('x', newX);
+                    icon.setAttribute('y', newY + 2.5);
+                    requestAnimationFrame(animate);
+                } else {
+                    icon.remove();
+                    resolve();
+                }
+            };
+
+            requestAnimationFrame(animate);
+        });
+    });
+
+    await Promise.all(animationPromises);
+
+    // Clean up after animation
+    if (animationLayer) animationLayer.remove();
+    animatingNodes.clear();
+}
 
 
 /**
