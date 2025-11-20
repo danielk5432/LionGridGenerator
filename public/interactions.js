@@ -1,4 +1,4 @@
-import { state, addLion, queueMove, cancelMoves } from './state.js';
+import { state, addLion, queueMove, cancelMoves, removeLion } from './state.js';
 import { render, svgEl, calculateArrowGeometry } from './renderer.js';
 import { screenToWorld, worldToView, screenToView, getNearestNodeId, $ } from './utils.js';
 import { panZoomInstance } from './ui.js';
@@ -8,20 +8,22 @@ let interactionInfo = null;
 
 function handleRightClick(e) {
 	e.preventDefault();
+	if (state.started) return;
 
 	const nodeEl = e.target.closest('.node');
 	if (!nodeEl) return;
 
 	const nodeId = nodeEl.dataset.nodeId;
 	const isLionNode = state.lions.some(lion => lion.nodeId === nodeId);
-	if (isLionNode) return;
 
-	if (state.started && state.contaminated.has(nodeId)) return;
-
-	if (state.markedNodes.has(nodeId)) {
-		state.markedNodes.delete(nodeId);
+	if (isLionNode) {
+		removeLion(nodeId);
 	} else {
-		state.markedNodes.add(nodeId);
+		if (state.markedNodes.has(nodeId)) {
+			state.markedNodes.delete(nodeId);
+		} else {
+			state.markedNodes.add(nodeId);
+		}
 	}
 	render();
 }

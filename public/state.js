@@ -41,6 +41,14 @@ export function addLion(nodeId) {
 	return id;
 }
 
+export function removeLion(nodeId) {
+	const lionIndex = state.lions.findIndex(lion => lion.nodeId === nodeId);
+	if (lionIndex > -1) {
+		state.lions.splice(lionIndex, 1);
+	}
+	render();
+}
+
 export function queueMove(lionId, targetNodeId) {
 	state.queuedMoves.set(lionId, targetNodeId);
 	$('#moveBtn').disabled = state.queuedMoves.size === 0;
