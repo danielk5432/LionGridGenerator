@@ -6,6 +6,7 @@ export const state = {
 	lions: [], // [{id, nodeId}]
 	queuedMoves: new Map(), // lionId -> targetNodeId
 	contaminated: new Set(), // nodeId set
+	markedNodes: new Set(), // nodeId set
 	started: false,
 	lastLionId: 0,
 };
@@ -14,6 +15,7 @@ export function resetAll() {
 	state.lions = [];
 	state.queuedMoves.clear();
 	state.contaminated.clear();
+	state.markedNodes.clear();
 	state.started = false;
 	state.lastLionId = 0;
 	$('#moveBtn').disabled = true;
@@ -31,6 +33,9 @@ export function setGraph(g) {
 }
 
 export function addLion(nodeId) {
+	if (state.markedNodes.has(nodeId)) {
+		state.markedNodes.delete(nodeId);
+	}
 	const id = ++state.lastLionId;
 	state.lions.push({ id, nodeId });
 	return id;

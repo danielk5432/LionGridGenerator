@@ -116,13 +116,18 @@ function renderNodes(viewport) {
                     countText.textContent = `x${lionsHere}`;
                     g.appendChild(countText);
                 }
-            }
-
-            if (state.started && state.contaminated.has(node.id) && lionsHere === 0) {
-                const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2, 'text-anchor': 'middle' });
-                text.textContent = '🦠';
-                g.appendChild(text);
-            }
+            } else {
+				if (!state.started && state.markedNodes.has(node.id)) {
+					const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2, 'text-anchor': 'middle' });
+					text.textContent = '❌';
+					g.appendChild(text);
+				}
+				if (state.started && state.contaminated.has(node.id)) {
+					const text = svgEl('text', { class: 'emoji', x: node.x, y: node.y + 2, 'text-anchor': 'middle' });
+					text.textContent = '🦠';
+					g.appendChild(text);
+				}
+			}
         }
 
 		viewport.appendChild(g);

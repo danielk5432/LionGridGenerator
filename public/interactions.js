@@ -6,6 +6,26 @@ import { CONFIG } from './config.js';
 
 let interactionInfo = null;
 
+function handleRightClick(e) {
+	e.preventDefault();
+
+	const nodeEl = e.target.closest('.node');
+	if (!nodeEl) return;
+
+	const nodeId = nodeEl.dataset.nodeId;
+	const isLionNode = state.lions.some(lion => lion.nodeId === nodeId);
+	if (isLionNode) return;
+
+	if (state.started && state.contaminated.has(nodeId)) return;
+
+	if (state.markedNodes.has(nodeId)) {
+		state.markedNodes.delete(nodeId);
+	} else {
+		state.markedNodes.add(nodeId);
+	}
+	render();
+}
+
 function isDragSourceValid(nodeId) {
     if (!nodeId) return false;
     return state.lions.some(lion => 
@@ -87,6 +107,11 @@ function onInteractionMove(e) {
 }
 
 function onInteractionEnd(e) {
+    if (e.button === 2) {
+        interactionInfo = null;
+        return;
+    }
+
     const debugOutput = document.getElementById('debug-output');
     if (debugOutput) {
         const point = e.changedTouches ? e.changedTouches[0] : e;
@@ -217,4 +242,5 @@ export function initInteractions() {
     const svg = $('#graph');
     svg.addEventListener('mousedown', onInteractionStart);
     svg.addEventListener('touchstart', onInteractionStart, { passive: false });
+	svg.addEventListener('contextmenu', handleRightClick);
 }

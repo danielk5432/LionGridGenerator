@@ -118,6 +118,8 @@ export function initContamination() {
 	state.contaminated.clear();
 	const lionNodes = new Set(state.lions.map((l) => l.nodeId));
 	for (const node of state.graph.nodes) {
-		if (!lionNodes.has(node.id)) state.contaminated.add(node.id);
+		if (!lionNodes.has(node.id) && !state.markedNodes.has(node.id)) {
+			state.contaminated.add(node.id);
+		}
 	}
 }
