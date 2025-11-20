@@ -62,3 +62,26 @@ export function cancelMoves(fromNodeId, toNodeId) {
 		render();
 	}
 }
+
+export function markAllNodes() {
+	if (state.started) return;
+	const lionNodes = new Set(state.lions.map(l => l.nodeId));
+	for (const node of state.graph.nodes) {
+		if (!lionNodes.has(node.id)) {
+			state.markedNodes.add(node.id);
+		}
+	}
+	render();
+}
+
+export function isGameWon() {
+	return state.contaminated.size === 0;
+}
+
+export function isGameLost() {
+	const lionNodes = new Set(state.lions.map(l => l.nodeId));
+	for (const nodeId of state.contaminated) {
+		if (lionNodes.has(nodeId)) return true;
+	}
+	return false;
+}

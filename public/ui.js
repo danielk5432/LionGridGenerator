@@ -1,4 +1,4 @@
-import { resetAll, setGraph } from './state.js';
+import { resetAll, setGraph, markAllNodes } from './state.js';
 import { startSimulation, executeMoves } from './game.js';
 import { normalizeGraph, $ } from './utils.js';
 
@@ -55,6 +55,7 @@ export function setupUI() {
 	$('#startBtn').addEventListener('click', startSimulation);
 	$('#moveBtn').addEventListener('click', executeMoves);
 	$('#resetBtn').addEventListener('click', resetAll);
+	$('#markAllBtn').addEventListener('click', markAllNodes);
 
 	// Populate the list of available graphs on startup
 	populateGraphList();
