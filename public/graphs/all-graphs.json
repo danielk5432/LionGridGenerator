@@ -25,15 +25,36 @@
       "id": "cycle2",
       "name": "Cycle2",
       "description": "Cycle graph with one additional vertex",
-      "minLions": 3,
+      "minLions": 2,
       "filePath": "public/graphs/cycle2.json"
     },
     {
-      "id": "grid",
+      "id": "cycle3",
+      "name": "Cycle3",
+      "description": "Cycle graph with one additional vertex of length 3",
+      "minLions": 2,
+      "filePath": "public/graphs/cycle3.json"
+    },
+    {
+      "id": "grid5",
       "name": "Grid",
       "description": "5*5 Grid Graph",
       "minLions": 5,
       "filePath": "public/graphs/grid.json"
+    },
+    {
+      "id": "grid7",
+      "name": "Grid",
+      "description": "7*7 Grid Graph",
+      "minLions": 7,
+      "filePath": "public/graphs/7x7grid.json"
+    },
+    {
+      "id": "grid9",
+      "name": "Grid",
+      "description": "9*9 Grid Graph",
+      "minLions": 9,
+      "filePath": "public/graphs/9x9grid.json"
     },
     {
       "id": "counterexample1",
@@ -48,6 +69,13 @@
       "description": "Counterexample of Subgraph Question - with additaional edge",
       "minLions": 3,
       "filePath": "public/graphs/counterexample2.json"
+    },
+    {
+      "id": "saturatedbinarytree",
+      "name": "Saturated Binary Tree",
+      "description": "A saturated binary tree of height 5",
+      "minLions": 3,
+      "filePath": "public/graphs/saturatedbinarytree.json"
     }
   ]
 }
